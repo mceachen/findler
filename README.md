@@ -22,11 +22,13 @@ except for that last bit.
 ```Findler.iterator``` instances can be "paused" and "resumed" with ```to_json```.
 The entire state of the iteration for the filesystem is returned, which can then
 be pushed onto any durable storage, like ActiveRecord or Redis.
+
 ```ruby
 File.open('state.json', 'w') { |f| f.write(iterator.to_json) }
 ```
 
 To resume iteration, use ```Findler.iterator_from_json", and continue iterating:
+
 ```ruby
 Findler.iterator_from_json(IO.open('state.json'))
 iterator.next
