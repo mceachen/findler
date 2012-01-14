@@ -5,17 +5,17 @@ set of paths, suitable concurrent workers and very large filesystem enumerations
 
 ## Usage
 
-  ```ruby
-  f = Findler.new "/Users/mrm"
-  f.append_extension ".jpg", ".jpeg"
-  f.append_paths "My Pictures", "Photos"
-  f.case_insensitive!
-  f.ignore_hidden_files!
+```ruby
+f = Findler.new "/Users/mrm"
+f.append_extension ".jpg", ".jpeg"
+f.append_paths "My Pictures", "Photos"
+f.case_insensitive!
+f.ignore_hidden_files!
 
-  iterator = f.iterator
-  iterator.next
-  # => "/Users/mrm/Photos/IMG_1234.JPG"
-  ```
+iterator = f.iterator
+iterator.next
+# => "/Users/mrm/Photos/IMG_1234.JPG"
+```
 
 ## Continuations
 
