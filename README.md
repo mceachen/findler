@@ -8,7 +8,6 @@ set of paths, suitable concurrent workers and very large filesystem enumerations
 ```ruby
 f = Findler.new "/Users/mrm"
 f.append_extension ".jpg", ".jpeg"
-f.append_paths "My Pictures", "Photos"
 iterator = f.iterator
 iterator.next
 # => "/Users/mrm/Photos/IMG_1000.JPG"
