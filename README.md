@@ -27,7 +27,7 @@ be pushed onto any durable storage, like ActiveRecord or Redis.
 File.open('state.json', 'w') { |f| f.write(iterator.to_json) }
 ```
 
-To resume iteration, use ```Findler.iterator_from_json", and continue iterating:
+To resume iteration, use ```Findler.iterator_from_json```, and continue iterating:
 
 ```ruby
 Findler.iterator_from_json(IO.open('state.json'))
