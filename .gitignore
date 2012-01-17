@@ -1,4 +1,6 @@
 *.gem
-.bundle
+.idea/
+.yardoc/
+.bundle/
 Gemfile.lock
-pkg/*
+pkg/

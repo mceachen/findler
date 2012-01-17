@@ -18,18 +18,18 @@ iterator.next
 This should smell an awful lot like [hike](https://github.com/sstephenson/hike),
 except for that last bit.
 
-```Findler.iterator``` instances can be "paused" and "resumed" with ```to_json```.
+```Findler.iterator``` instances can be "paused" and "resumed" with ```to_yaml```.
 The entire state of the iteration for the filesystem is returned, which can then
-be pushed onto any durable storage, like ActiveRecord or Redis.
+be pushed onto any durable storage, like ActiveRecord or Redis, or just a local file:
 
 ```ruby
-File.open('state.json', 'w') { |f| f.write(iterator.to_json) }
+File.open('state.yaml', 'w') { |f| f.write(iterator.to_yaml) }
 ```
 
-To resume iteration, use ```Findler.iterator_from_json```, and continue iterating:
+To resume iteration:
 
 ```ruby
-Findler.iterator_from_json(IO.open('state.json'))
+Findler::Iterator.from_yaml(IO.open('state.yaml'))
 iterator.next
 # => "/Users/mrm/Photos/IMG_1001.JPG"
 ```
