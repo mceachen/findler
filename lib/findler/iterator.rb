@@ -61,14 +61,11 @@ class Findler
       end
 
       # If someone touches the directory while we iterate, redo the @children.
-      @children = nil if @path.mtime != @mtime
+      @children = nil if @path.ctime != @ctime || @path.mtime != @mtime
       @children ||= begin
         @mtime = @path.mtime
-        @path.
-          children.
-          delete_if do |ea|
-          skip?(ea)
-        end
+        @ctime = @path.ctime
+        @path.children.delete_if { |ea| skip?(ea) }
       end
 
       nxt = @children.shift

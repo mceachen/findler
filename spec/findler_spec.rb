@@ -41,17 +41,33 @@ describe Findler do
     end
   end
 
-  xit "should find files added after iteration started" do
+  it "should find files added after iteration started" do
     with_tree([".txt"]) do |dir|
       f = Findler.new(dir)
       iter = f.iterator
       iter.next.should_not be_nil
-      FileUtils.touch(dir + "new.txt", :mtime => Time.now - 5)
+
+      # cheating with mtime on the touch doesn't properly update the parent directory ctime,
+      # so we have to deal with the second-granularity resolution of the filesystem.
+      sleep(1.1)
+
+      FileUtils.touch(dir + "new.txt")
       collect_files(iter).should include("new.txt")
     end
   end
 
-  it "should not return files removed after iteration started"
+  it "should not return files removed after iteration started" do
+    with_tree([".txt"]) do |dir|
+      f = Findler.new(dir)
+      iter = f.iterator
+      iter.next.should_not be_nil
+      sleep(1.1)
+
+      (dir + "tmp-1.txt").unlink
+      collect_files(iter).should_not include("tmp-1.txt")
+    end
+  end
+
   it "should to_yaml/from_yaml before iteration"
   it "should to_yaml/from_yaml in the middle of iteration"
   it "should to_yaml/from_yaml after iteration"
