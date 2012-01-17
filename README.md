@@ -1,7 +1,8 @@
 # Findler: Filesystem Iteration with Persistable State
 
-Findler is a Ruby library for iterating over a filtered set of files in a given
-set of paths, suitable concurrent workers and very large filesystem enumerations.
+Findler is a Ruby library for iterating over a filtered set of files from a given
+path, written to be suitable with concurrent workers and very large
+filesystem hierarchies.
 
 ## Usage
 
