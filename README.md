@@ -11,7 +11,7 @@ f = Findler.new "/Users/mrm"
 f.append_extension ".jpg", ".jpeg"
 iterator = f.iterator
 iterator.next
-# => "/Users/mrm/Photos/IMG_1000.JPG"
+# => "/Users/mrm/Photos/img_1000.jpg"
 ```
 
 ## Cross-process continuations
@@ -32,5 +32,5 @@ To resume iteration:
 ```ruby
 Findler::Iterator.from_yaml(IO.open('state.yaml'))
 iterator.next
-# => "/Users/mrm/Photos/IMG_1001.JPG"
+# => "/Users/mrm/Photos/img_1001.jpg"
 ```
