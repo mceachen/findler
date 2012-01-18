@@ -78,7 +78,7 @@ describe Findler do
       first.should_not be_nil
       data = Marshal.dump(iter)
       new_iter = Marshal.load(data)
-      collect_files(new_iter).should =~ (`find * -type f -iname \\*.jpg`.split - [first])
+      collect_files(new_iter).should =~ (`find * -type f -iname \\*.jpg`.split - [first.relative_path_from(dir).to_s])
     end
   end
 

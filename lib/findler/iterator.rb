@@ -10,11 +10,15 @@ class Findler
       @patterns = attrs[:patterns]
       @flags = attrs[:flags]
       @parent = parent
-      @sub_iter = new(Marshal.load(attrs[:sub_iter]), self) if attrs[:sub_iter]
+      @sub_iter = self.class.new(attrs[:sub_iter], self) if attrs[:sub_iter]
+    end
+
+    def to_hash
+      {:path => @path, :visited => @visited, :patterns => @patterns, :flags => @flags, :sub_iter => @sub_iter && @sub_iter.to_hash}
     end
 
     def _dump(depth)
-      Marshal.dump({:path => @path, :visited => @visited, :patterns => @patterns, :flags => @flags, :sub_iter => @sub_iter})
+      Marshal.dump(to_hash)
     end
 
     def self._load(data)
