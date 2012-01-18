@@ -61,16 +61,29 @@ describe Findler do
       f = Findler.new(dir)
       iter = f.iterator
       iter.next.should_not be_nil
-      sleep(1.1)
+      sleep(1.1) # see above for hand-wringing-defense of this atrocity
 
       (dir + "tmp-1.txt").unlink
       collect_files(iter).should_not include("tmp-1.txt")
     end
   end
 
-  it "should to_yaml/from_yaml before iteration"
-  it "should to_yaml/from_yaml in the middle of iteration"
-  it "should to_yaml/from_yaml after iteration"
+  it "should dump/load properly before iteration" do
+    with_tree([".jpg", ".txt", ".JPG"]) do |dir|
+      f = Findler.new(dir)
+      f.append_extension ".jpg"
+      f.case_insensitive!
+      iter = f.iterator
+      first = iter.next
+      first.should_not be_nil
+      data = Marshal.dump(iter)
+      new_iter = Marshal.load(data)
+      collect_files(new_iter).should =~ (`find * -type f -iname \\*.jpg`.split - [first])
+    end
+  end
+
+  it "should dump/load in the middle of iteration"
+  it "should dump/load after iteration"
   it "should create an iterator even for a non-existent directory"
 
 end

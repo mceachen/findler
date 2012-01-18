@@ -1,26 +1,24 @@
-# Use fnmatch?
+require 'bloomer'
+
 class Findler
   class Iterator
-    YAML_VERSION = 0
-
-    def self.from_yaml(yaml_string, parent = nil)
-      return nil if yaml_string.nil?
-      h = YAML.load(yaml_string)
-      v = h.delete(:version)
-      if v && YAML_VERSION != v
-        raise StandardError "Can't deserialize version #{v}"
-      end
-      new(h, parent)
-    end
 
     def initialize(attrs, parent = nil)
       @path = attrs[:path]
       @path = Pathname.new(@path) unless @path.is_a? Pathname
-      @visited = attrs[:visited] || []
+      @visited = attrs[:visited] || Bloomer.new(@path.children.size, 0.00001) # <= highly unlikely
       @patterns = attrs[:patterns]
       @flags = attrs[:flags]
       @parent = parent
-      @sub_iter = self.class.from_yaml(attrs[:sub_iter], self)
+      @sub_iter = new(Marshal.load(attrs[:sub_iter]), self) if attrs[:sub_iter]
+    end
+
+    def _dump(depth)
+      Marshal.dump({:path => @path, :visited => @visited, :patterns => @patterns, :flags => @flags, :sub_iter => @sub_iter})
+    end
+
+    def self._load(data)
+      new(Marshal.load(data))
     end
 
     def flags
@@ -56,7 +54,7 @@ class Findler
       if @sub_iter
         nxt = @sub_iter.next
         return nxt unless nxt.nil?
-        @visited << @sub_iter.path.basename.to_s
+        @visited.add @sub_iter.path.basename.to_s
         @sub_iter = nil
       end
 
@@ -75,7 +73,7 @@ class Findler
         @sub_iter = Iterator.new({:path => nxt}, self)
         self.next
       else
-        @visited << nxt.basename.to_s
+        @visited.add nxt.basename.to_s
         nxt
       end
     end
@@ -93,12 +91,6 @@ class Findler
       return false if patterns.nil?
       path = pathname.cleanpath
       return !patterns.any? { |p| File.fnmatch(p, path, fnmatch_flags) }
-    end
-
-    def to_yaml
-      attrs = {}
-      ATTRS.each { |ea| attrs[ea] = self.instance_variable_get(ea) }
-      attrs.to_yaml
     end
   end
 end
