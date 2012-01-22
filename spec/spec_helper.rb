@@ -52,10 +52,14 @@ def expected_files(depth, files_per_dir, subdirs_per_dir)
   files_per_dir + (subdirs_per_dir * expected_files(depth - 1, files_per_dir, subdirs_per_dir))
 end
 
+def relative_path(parent, pathname)
+  pathname.relative_path_from(parent.path).to_s
+end
+
 def collect_files(iter)
   files = []
   while nxt = iter.next
-    files << nxt.relative_path_from(iter.path).to_s
+    files << relative_path(iter, nxt)
   end
   files
 end

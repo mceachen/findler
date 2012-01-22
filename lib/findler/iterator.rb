@@ -3,31 +3,40 @@ require 'bloomer'
 class Findler
   class Iterator
 
+    attr_reader :path, :parent, :patterns, :flags, :visited_dirs, :visited_files
+
     def initialize(attrs, parent = nil)
       @path = attrs[:path]
       @path = Pathname.new(@path) unless @path.is_a? Pathname
-      @visited = attrs[:visited] || Bloomer.new(@path.children.size, 0.00001) # <= highly unlikely
-      @patterns = attrs[:patterns]
-      @flags = attrs[:flags]
       @parent = parent
+
+      set_ivar(:visited_dirs, attrs) { Bloomer::Scalable.new(256, 1.0/1_000_000) }
+      set_ivar(:visited_files, attrs) { Bloomer::Scalable.new(256, 1.0/1_000_000) }
+      set_ivar(:patterns, attrs) { nil }
+      set_ivar(:flags, attrs) { 0 }
+
       @sub_iter = self.class.new(attrs[:sub_iter], self) if attrs[:sub_iter]
     end
 
-    def to_hash
-      {:path => @path, :visited => @visited, :patterns => @patterns, :flags => @flags, :sub_iter => @sub_iter && @sub_iter.to_hash}
+    # Visit this directory and all sub directories, and check for unseen files. Only call on the root iterator.
+    def rescan!
+      raise "Only invoke on root" unless @parent.nil?
+      @visited_dirs = Bloomer::Scalable.new(256, 1.0/1_000_000)
+      @children = nil
+      @sub_iter = nil
     end
 
-    def _dump(depth)
-      Marshal.dump(to_hash)
-    end
-
-    def self._load(data)
-      new(Marshal.load(data))
-    end
-
-    def flags
-      @parent ? @parent.flags : @flags
-    end
+    #def to_hash
+    #  {:path => @path, :visited_dirs:patterns => @patterns, :flags => @flags, :sub_iter => @sub_iter && @sub_iter.to_hash}
+    #end
+    #
+    #def _dump(depth)
+    #  Marshal.dump(to_hash)
+    #end
+    #
+    #def self._load(data)
+    #  new(Marshal.load(data))
+    #end
 
     def case_insensitive?
       (Findler::IGNORE_CASE | flags) != 0
@@ -37,12 +46,8 @@ class Findler
       (Findler::INCLUDE_HIDDEN | flags) == 0
     end
 
-    def patterns
-      @parent ? @parent.patterns : @patterns
-    end
-
     def fnmatch_flags
-      (@parent && @parent.fnmatch_flags) || begin
+      @_fnflags ||= (@parent && @parent.fnmatch_flags) || begin
         f = 0
         f |= File::FNM_CASEFOLD if case_insensitive?
         f |= File::FNM_DOTMATCH if !skip_hidden?
@@ -55,10 +60,12 @@ class Findler
     end
 
     def next
+      return nil unless @path.exist?
+      
       if @sub_iter
         nxt = @sub_iter.next
         return nxt unless nxt.nil?
-        @visited.add @sub_iter.path.basename.to_s
+        @visited_dirs.add @sub_iter.path.to_s
         @sub_iter = nil
       end
 
@@ -77,24 +84,36 @@ class Findler
         @sub_iter = Iterator.new({:path => nxt}, self)
         self.next
       else
-        @visited.add nxt.basename.to_s
+        @visited_files.add nxt.to_s
         nxt
       end
     end
 
     private
 
+    def set_ivar(field, attrs, &block)
+      sym = "@#{field}".to_sym
+      v = attrs[field]
+      v ||= begin
+        (p = instance_variable_get(:@parent)) && p.instance_variable_get(sym)
+      end
+      v ||= yield
+      instance_variable_set(sym, v)
+    end
+
     def hidden?(pathname)
       pathname.basename.to_s.start_with?(".")
     end
 
     def skip? pathname
-      return true if @visited.include?(pathname.basename.to_s)
+      s = pathname.to_s
       return true if hidden?(pathname) && skip_hidden?
-      return false if pathname.directory?
-      return false if patterns.nil?
-      path = pathname.cleanpath
-      return !patterns.any? { |p| File.fnmatch(p, path, fnmatch_flags) }
+      return @visited_dirs.include?(s) if pathname.directory?
+      return true if @visited_files.include?(s)
+      unless patterns.nil?
+        return true if patterns.none? { |p| pathname.fnmatch(p, fnmatch_flags) }
+      end
+      return false
     end
   end
 end

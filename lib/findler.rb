@@ -1,6 +1,6 @@
 class Findler
 
-  VERSION = "0.0.1"
+  VERSION = "0.0.2"
 
   IGNORE_CASE = 1
   INCLUDE_HIDDEN = 2

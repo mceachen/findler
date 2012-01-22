@@ -19,18 +19,32 @@ iterator.next
 This should smell an awful lot like [hike](https://github.com/sstephenson/hike),
 except for that last bit.
 
-```Findler.iterator``` instances can be "paused" and "resumed" with ```to_yaml```.
+```Findler::Iterator``` instances can be "paused" and "resumed" with ```Marshal```.
 The entire state of the iteration for the filesystem is returned, which can then
 be pushed onto any durable storage, like ActiveRecord or Redis, or just a local file:
 
 ```ruby
-File.open('state.yaml', 'w') { |f| f.write(iterator.to_yaml) }
+File.open('iterator.state', 'w') { |f| Marshal.dump(iterator, f) }
 ```
 
 To resume iteration:
 
 ```ruby
-Findler::Iterator.from_yaml(IO.open('state.yaml'))
+Marshal.load(IO.open('iterator.state'))
 iterator.next
 # => "/Users/mrm/Photos/img_1001.jpg"
 ```
+
+To re-check a directory hierarchy for files that you haven't visited yet:
+
+```ruby
+iterator.rescan!
+iterator.next
+# => "/Users/mrm/Photos/img_1002.jpg"
+```
+
+
+## Changelog
+
+* 0.0.1 First `find`
+* 0.0.2 Added scalable Bloom filter so ```Iterator#rescan``` is possible
