@@ -1,6 +1,7 @@
 require 'rspec'
 require 'tmpdir'
 require 'fileutils'
+require 'findler'
 
 RSpec.configure do |config|
   config.color_enabled = true

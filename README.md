@@ -48,3 +48,4 @@ iterator.next
 
 * 0.0.1 First `find`
 * 0.0.2 Added scalable Bloom filter so ```Iterator#rescan``` is possible
+* 0.0.3 Fixed gemfile packaging
