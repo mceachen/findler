@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'exiftoolr'
+require 'findler'
+
+f = Findler.new ENV['HOME']
+f.append_extension ".jpg", ".jpeg", ".cr2", ".nef"
+f.case_insensitive!
+f.filter_with do |parent, child_dirs, child_files|
+  e = Exiftoolr.new child_files.collect { |ea| ea.realpath.to_s }
+  good = e.files_with_results.collect{|ea|Pathname.new ea}
+  bad = child_files - good
+  puts "Files missing EXIF:\n  #{(bad).join("\n  ")}" unless bad.empty?
+  good + child_dirs
+end
+
+iter = f.iterator
+
+files = []
+while nxt = iter.next
+  files << nxt
+end
+puts files.join("\n")

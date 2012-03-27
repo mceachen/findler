@@ -1,11 +1,17 @@
-require 'rspec'
+require 'minitest/spec'
+require 'minitest/reporters'
+require 'minitest/autorun'
 require 'tmpdir'
 require 'fileutils'
 require 'findler'
 
-RSpec.configure do |config|
-  config.color_enabled = true
-  config.formatter = 'documentation'
+MiniTest::Unit.runner = MiniTest::SuiteRunner.new
+if ENV["RM_INFO"] || ENV["TEAMCITY_VERSION"]
+  MiniTest::Unit.runner.reporters << MiniTest::Reporters::RubyMineReporter.new
+elsif ENV['TM_PID']
+  MiniTest::Unit.runner.reporters << MiniTest::Reporters::RubyMateReporter.new
+else
+  MiniTest::Unit.runner.reporters << MiniTest::Reporters::ProgressReporter.new
 end
 
 def with_tmp_dir(&block)
@@ -14,6 +20,7 @@ def with_tmp_dir(&block)
     Dir.chdir(dir)
     yield(Pathname.new dir)
   end
+ensure
   Dir.chdir(cwd)
 end
 
@@ -26,13 +33,13 @@ end
 
 def mk_tree(target_dir, options)
   opts = {
-    :depth => 3,
-    :files_per_dir => 3,
-    :subdirs_per_dir => 3,
-    :prefix => "tmp",
-    :suffix => "",
-    :dir_prefix => "dir",
-    :dir_suffix => ""
+      :depth => 3,
+      :files_per_dir => 3,
+      :subdirs_per_dir => 3,
+      :prefix => "tmp",
+      :suffix => "",
+      :dir_prefix => "dir",
+      :dir_suffix => ""
   }.merge options
   p = target_dir.is_a?(Pathname) ? target_dir : Pathname.new(target_dir)
   p.mkdir unless p.exist?
@@ -54,13 +61,13 @@ def expected_files(depth, files_per_dir, subdirs_per_dir)
 end
 
 def relative_path(parent, pathname)
-  pathname.relative_path_from(parent.path).to_s
+  pathname.relative_path_from(parent).to_s
 end
 
 def collect_files(iter)
   files = []
   while nxt = iter.next
-    files << relative_path(iter, nxt)
+    files << relative_path(iter.path, nxt)
   end
   files
 end

@@ -1,56 +1,50 @@
 require 'bloomer'
+require 'pathname'
 
 class Findler
+
   class Iterator
 
-    attr_reader :path, :parent, :patterns, :flags, :visited_dirs, :visited_files
+    attr_reader :path, :parent, :patterns, :flags, :filters_class, :filters, :visited_dirs, :visited_files
 
     def initialize(attrs, parent = nil)
       @path = attrs[:path]
       @path = Pathname.new(@path) unless @path.is_a? Pathname
+      @path = @path.expand_path unless @path.absolute?
       @parent = parent
 
-      set_ivar(:visited_dirs, attrs) { Bloomer::Scalable.new(256, 1.0/1_000_000) }
-      set_ivar(:visited_files, attrs) { Bloomer::Scalable.new(256, 1.0/1_000_000) }
-      set_ivar(:patterns, attrs) { nil }
-      set_ivar(:flags, attrs) { 0 }
+      set_inheritable_ivar(:visited_dirs, attrs) { self.class.new_presence_collection }
+      set_inheritable_ivar(:visited_files, attrs) { self.class.new_presence_collection }
+      set_inheritable_ivar(:patterns, attrs) { nil }
+      set_inheritable_ivar(:flags, attrs) { 0 }
+      set_inheritable_ivar(:filters, attrs) { [] }
+      set_inheritable_ivar(:filters_class, attrs) { Filters }
+      set_inheritable_ivar(:sort_with, attrs) { nil }
 
       @sub_iter = self.class.new(attrs[:sub_iter], self) if attrs[:sub_iter]
     end
 
     # Visit this directory and all sub directories, and check for unseen files. Only call on the root iterator.
     def rescan!
-      raise "Only invoke on root" unless @parent.nil?
-      @visited_dirs = Bloomer::Scalable.new(256, 1.0/1_000_000)
+      raise Error, "Only invoke on root" unless @parent.nil?
+      @visited_dirs = self.class.new_presence_collection
       @children = nil
       @sub_iter = nil
     end
 
-    #def to_hash
-    #  {:path => @path, :visited_dirs:patterns => @patterns, :flags => @flags, :sub_iter => @sub_iter && @sub_iter.to_hash}
-    #end
-    #
-    #def _dump(depth)
-    #  Marshal.dump(to_hash)
-    #end
-    #
-    #def self._load(data)
-    #  new(Marshal.load(data))
-    #end
-
-    def case_insensitive?
-      (Findler::IGNORE_CASE | flags) != 0
+    def ignore_case?
+      (Findler::IGNORE_CASE & flags) > 0
     end
 
-    def skip_hidden?
-      (Findler::INCLUDE_HIDDEN | flags) == 0
+    def include_hidden?
+      (Findler::INCLUDE_HIDDEN & flags) > 0
     end
 
     def fnmatch_flags
-      @_fnflags ||= (@parent && @parent.fnmatch_flags) || begin
+      @fnmatch_flags ||= (@parent && @parent.fnmatch_flags) || begin
         f = 0
-        f |= File::FNM_CASEFOLD if case_insensitive?
-        f |= File::FNM_DOTMATCH if !skip_hidden?
+        f |= File::FNM_CASEFOLD if ignore_case?
+        f |= File::FNM_DOTMATCH if include_hidden?
         f
       end
     end
@@ -61,7 +55,7 @@ class Findler
 
     def next
       return nil unless @path.exist?
-      
+
       if @sub_iter
         nxt = @sub_iter.next
         return nxt unless nxt.nil?
@@ -71,10 +65,13 @@ class Findler
 
       # If someone touches the directory while we iterate, redo the @children.
       @children = nil if @path.ctime != @ctime || @path.mtime != @mtime
-      @children ||= begin
+
+      if @children.nil?
         @mtime = @path.mtime
         @ctime = @path.ctime
-        @path.children.delete_if { |ea| skip?(ea) }
+        children = @path.children.delete_if { |ea| skip?(ea) }
+        filtered_children = @filters.inject(children){ |c, f| filter(c, f) }
+        @children = filtered_children
       end
 
       nxt = @children.shift
@@ -91,12 +88,30 @@ class Findler
 
     private
 
-    def set_ivar(field, attrs, &block)
-      sym = "@#{field}".to_sym
-      v = attrs[field]
-      v ||= begin
-        (p = instance_variable_get(:@parent)) && p.instance_variable_get(sym)
+    def self.new_presence_collection
+      Bloomer::Scalable.new(256, 1.0/1_000_000)
+    end
+
+    def filter(children, filter_symbol)
+      filtered_children = filters_class.send(filter_symbol, children)
+      unless filtered_children.respond_to? :collect
+        raise Error, "#{path.to_s}: filter_with, must return an Enumerable"
       end
+      children_as_pathnames = filtered_children.collect { |ea| ea.is_a?(Pathname) ? ea : Pathname.new(ea) }
+      illegal_children = children_as_pathnames - children
+      unless illegal_children.empty?
+        raise Error, "#{path.to_s}: filter_with returned unexpected paths: #{illegal_children.join(",")}"
+      end
+      children_as_pathnames
+    end
+
+    # Sets the instance variable to the value in attrs[field].
+    # If attrs is missing a value, pull the value from the parent.
+    # If the parent doesn't have a value, use the block to generate a default.
+    def set_inheritable_ivar(field, attrs, &block)
+      v = attrs[field]
+      sym = "@#{field}".to_sym
+      v ||= parent.instance_variable_get(sym)
       v ||= yield
       instance_variable_set(sym, v)
     end
@@ -107,9 +122,9 @@ class Findler
 
     def skip? pathname
       s = pathname.to_s
-      return true if hidden?(pathname) && skip_hidden?
-      return @visited_dirs.include?(s) if pathname.directory?
-      return true if @visited_files.include?(s)
+      return true if !include_hidden? && hidden?(pathname)
+      return visited_dirs.include?(s) if pathname.directory?
+      return true if visited_files.include?(s)
       unless patterns.nil?
         return true if patterns.none? { |p| pathname.fnmatch(p, fnmatch_flags) }
       end
