@@ -61,8 +61,8 @@ What you provide to ```add_filter``` is a symbolized name of a class method
 on ```Findler::Filters```:
 
 ```ruby
-f = Findler.new "."
-f.add_filters :order_by_name
+f = Findler.new(".")
+f.add_filter :order_by_name
 ```
 
 Note that the last filter added will be last to order the children, so it will be the
