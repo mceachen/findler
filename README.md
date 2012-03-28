@@ -8,9 +8,9 @@ filesystem hierarchies.
 
 ```ruby
 f = Findler.new "/Users/mrm"
-f.append_extension ".jpg", ".jpeg"
+f.add_extensions ".jpg", ".jpeg"
 iterator = f.iterator
-iterator.next
+iterator.next_file
 # => "/Users/mrm/Photos/img_1000.jpg"
 ```
 
@@ -31,7 +31,7 @@ To resume iteration:
 
 ```ruby
 Marshal.load(IO.open('iterator.state'))
-iterator.next
+iterator.next_file
 # => "/Users/mrm/Photos/img_1001.jpg"
 ```
 
@@ -39,27 +39,48 @@ To re-check a directory hierarchy for files that you haven't visited yet:
 
 ```ruby
 iterator.rescan!
-iterator.next
+iterator.next_file
 # => "/Users/mrm/Photos/img_1002.jpg"
 ```
 
-## Custom filtering
+External synchronization between the serialized state of the
+iterator and the other processes will have to be done by you, of course.
+The ```load```, ```next_file``` , and ```dump``` should be done while holding
+an iteration mutex of some sort.
 
-By providing a Class and method symbol to ```Findler.filter_with```, you can
-do more advanced file and directory filtering.
+## Filtering and ordering
 
-When new directories are entered, the block will be passed
+Filters provide custom exclusion and ordering criteria, so you don't
+have to do that logic in the code that consumes from your iterator.
 
-1. a ```Pathname``` instance of the new directory, as well as
-2. an array of child directories, and
-3. an array of child files.
+Filters can't be procs or lambdas because those aren't safely serializable.
 
-Note that the pre-established filters (based on ```#include_hidden?``` and patterns) will
-have already been applied, so if, for example, the file doesn't match any of the provided
-patterns, the block won't see that file.
+What you provide to ```add_filter``` is a symbolized name of a class method
+on ```Findler::Filters```:
 
-The returned value from the class method will be the final set of elements (both files
-and directories) that Findler will return from ```next()```.
+```ruby
+f = Findler.new "."
+f.add_filters :order_by_name
+```
+
+Note that the last filter added will be last to order the children, so it will be the
+"primary" sort criterion. Note also that the ordering is only done in
+the context of a given directory.
+
+### Implementing your own filter
+
+Filter methods receive an array of Pathname instances. Those pathnames will:
+
+1. have the same parent
+2. will not have been enumerated by ```next()``` already
+3. will satisfy the settings given to the parent Findler instance, like ```include_hidden```
+   and added patterns.
+
+Note that the last filter added will be last to order the children, so it will be the
+"primary" sort criterion.
+
+The returned values from the class method will be the final set of elements (both files
+and directories) that Findler will return from ```next_file```.
 
 ### Example
 
@@ -67,26 +88,30 @@ To find files that have valid EXIF headers, using the *most* excellent
 [exiftoolr](https://github.com/mceachen/exiftoolr) gem, you'd do this:
 
 ```ruby
+require 'findler'
 require 'exiftoolr'
 
-class Filter
-  def exif_only(directory, child_dirs, child_files)
-    e = Exiftoolr.new(child_files.collect{ |ea| ea.to_s })
+# Monkey-patch Filters to add our custom filter:
+class Findler::Filters
+  def self.exif_only(children)
+    child_files = children.select{|ea|ea.file?}
+    child_dirs = child_files.select{|ea|ea.directory?}
+    e = Exiftoolr.new(child_files)
     e.files_with_results + child_dirs
   end
 end
 
 f = Findler.new "/Users/mrm"
-f.append_extension ".jpg", ".jpeg", ".cr2", ".nef"
+f.add_extensions ".jpg", ".jpeg", ".cr2", ".nef"
 f.case_insensitive!
-f.filter_with(Filter.new.method(:exif_only))
+f.add_filter(:exif_only)
 ```
 
 ### Notes
 
 * the child_dirs and child_files are arrays of ```Pathname```s that you can assume are absolute.
 * only child dirs and files that satisfy the ```extension``` and ```pattern``` filters will be seen by the filter class method.
-* the block needs to be given to each ```next``` call -- it is not memoized (nor could it be, as it would break Marshalling).
+* the block needs to be given to each ```next_file``` call -- it is not memoized (nor could it be, as it would break Marshalling).
 * if a directory is found to be empty, the block will be called multiple times for a given call to ```next()```.
 * if you want to be notified when new directories are walked into, and you want to do a bulk operation within that directory,
   this gives you that hook -- just remember to return ```child_dirs + child_files``` at the end of your block.

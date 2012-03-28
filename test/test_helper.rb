@@ -24,9 +24,9 @@ ensure
   Dir.chdir(cwd)
 end
 
-def with_tree(sufficies, &block)
+def with_tree(sufficies, options = {}, &block)
   with_tmp_dir do |dir|
-    sufficies.each { |suffix| mk_tree dir, @opts.merge(:suffix => suffix) }
+    sufficies.each { |suffix| mk_tree dir, options.merge(:suffix => suffix) }
     yield(dir)
   end
 end
@@ -66,8 +66,17 @@ end
 
 def collect_files(iter)
   files = []
-  while nxt = iter.next
+  while nxt = iter.next_file
     files << relative_path(iter.path, nxt)
   end
   files
+end
+
+def fs_case_sensitive?
+  @fs_case_sensitive ||= begin
+    `touch CASETEST`
+    !File.exist?('casetest')
+  ensure
+    `rm CASETEST`
+  end
 end

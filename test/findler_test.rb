@@ -19,18 +19,6 @@ end
 
 describe Findler do
 
-  before :each do
-    @opts = {
-        :depth => 3,
-        :files_per_dir => 3,
-        :subdirs_per_dir => 3,
-        :prefix => "tmp",
-        :suffix => "",
-        :dir_prefix => "dir",
-        :dir_suffix => ""
-    }
-  end
-
   def touch_secrets
     `mkdir .hide ; touch .outer-hide dir-0/.hide .hide/normal.txt .hide/.secret`
   end
@@ -73,8 +61,12 @@ describe Findler do
     with_tree(%W(.jpg .txt .JPG)) do |dir|
       f = Findler.new(dir)
       f.add_extension ".jpg"
-      iter = f.iterator
-      collect_files(iter).sort.must_equal `find * -type f -name \\*.jpg`.split.sort
+      if fs_case_sensitive?
+        f.case_sensitive!
+        collect_files(f.iterator).sort.must_equal `find * -type f -name \\*.jpg`.split.sort
+      end
+      f.case_insensitive!
+      collect_files(f.iterator).sort.must_equal `find * -type f -iname \\*.jpg`.split.sort
     end
   end
 
@@ -92,7 +84,7 @@ describe Findler do
     with_tree(%W(.txt)) do |dir|
       f = Findler.new(dir)
       iter = f.iterator
-      iter.next.wont_be_nil
+      iter.next_file.wont_be_nil
 
       # cheating with mtime on the touch doesn't properly update the parent directory ctime,
       # so we have to deal with the second-granularity resolution of the filesystem.
@@ -122,7 +114,7 @@ describe Findler do
     with_tree([".txt"]) do |dir|
       f = Findler.new(dir)
       iter = f.iterator
-      iter.next.wont_be_nil
+      iter.next_file.wont_be_nil
       sleep(1.1) # see above for hand-wringing-defense of this atrocity
 
       (dir + "tmp-1.txt").unlink
@@ -138,13 +130,13 @@ describe Findler do
         f.add_extension ".jpg"
         f.case_insensitive!
         iter_a = f.iterator
-        files_a = i.times.collect { relative_path(iter_a.path, iter_a.next) }
+        files_a = i.times.collect { relative_path(iter_a.path, iter_a.next_file) }
         iter_b = Marshal.load(Marshal.dump(iter_a))
         files_b = collect_files(iter_b)
 
         iter_c = Marshal.load(Marshal.dump(iter_b))
         collect_files(iter_c)
-        iter_c.next.must_be_nil
+        iter_c.next_file.must_be_nil
 
         (files_a + files_b).sort.must_equal all_files.sort
       end
@@ -161,12 +153,12 @@ describe Findler do
     collect_files(f.iterator).must_be_empty
   end
 
-  it "should raise an error if the block given to next returns nil" do
+  it "should raise an error if the block given to next_file returns nil" do
     Dir.mktmpdir do |dir|
       f = Findler.new(dir)
       f.add_filter :no_return
       i = f.iterator
-      lambda { i.next }.must_raise(Findler::Error)
+      lambda { i.next_file }.must_raise(Findler::Error)
     end
   end
 
@@ -175,7 +167,7 @@ describe Findler do
       f = Findler.new(dir)
       f.add_filter :invalid_return
       i = f.iterator
-      lambda { i.next }.must_raise(Findler::Error)
+      lambda { i.next_file }.must_raise(Findler::Error)
     end
   end
 
@@ -189,7 +181,7 @@ describe Findler do
     end
   end
 
-  it "should support next blocks properly" do
+  it "should support next_file blocks properly" do
     with_tree(%W(.a .b)) do |dir|
       Dir["**/*.a"].each { |ea| File.open(ea, 'w') { |f| f.write("hello") } }
       f = Findler.new(dir)
@@ -197,6 +189,36 @@ describe Findler do
       iter = f.iterator
       files = collect_files(iter)
       files.sort.must_equal `find * -type f -name \\*.a`.split.sort
+    end
+  end
+
+  it "should support files_first ordering" do
+    with_tree(%W(.a), {
+        :depth => 2,
+        :files_per_dir => 2,
+        :subdirs_per_dir => 1,
+    }) do |dir|
+      f = Findler.new(dir)
+      f.add_filters :order_by_name, :files_first
+      expected = %W(tmp-0.a tmp-1.a dir-0/tmp-0.a dir-0/tmp-1.a)
+      collect_files(f.iterator).must_equal expected
+      f.add_filter :reverse
+      collect_files(f.iterator).must_equal expected.reverse
+    end
+  end
+
+  it "should support directory_first ordering" do
+    with_tree(%W(.a), {
+        :depth => 2,
+        :files_per_dir => 2,
+        :subdirs_per_dir => 1,
+    }) do |dir|
+      f = Findler.new(dir)
+      f.add_filters :order_by_name, :directories_first
+      expected = %W(dir-0/tmp-0.a dir-0/tmp-1.a tmp-0.a tmp-1.a)
+      collect_files(f.iterator).must_equal expected
+      f.add_filter :reverse
+      collect_files(f.iterator).must_equal expected.reverse
     end
   end
 end

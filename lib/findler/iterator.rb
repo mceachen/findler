@@ -53,11 +53,11 @@ class Findler
       @path
     end
 
-    def next
+    def next_file
       return nil unless @path.exist?
 
       if @sub_iter
-        nxt = @sub_iter.next
+        nxt = @sub_iter.next_file
         return nxt unless nxt.nil?
         @visited_dirs.add @sub_iter.path.to_s
         @sub_iter = nil
@@ -79,7 +79,7 @@ class Findler
 
       if nxt.directory?
         @sub_iter = Iterator.new({:path => nxt}, self)
-        self.next
+        self.next_file
       else
         @visited_files.add nxt.to_s
         nxt
