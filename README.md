@@ -71,10 +71,10 @@ the context of a given directory.
 
 ### Implementing your own filter
 
-Filter methods receive an array of Pathname instances. Those pathnames will:
+Filter methods receive an array of ```Pathname``` instances. Those pathnames will:
 
 1. have the same parent
-2. will not have been enumerated by ```next()``` already
+2. will not have been enumerated by ```next_file()``` already
 3. will satisfy the settings given to the parent Findler instance, like ```include_hidden```
    and added patterns.
 
@@ -82,7 +82,7 @@ Note that the last filter added will be last to order the children, so it will b
 "primary" sort criterion.
 
 The returned values from the class method will be the final set of elements (both files
-and directories) that Findler will return from ```next_file```.
+and directories) that Findler will return from ```next_file()```.
 
 ### Example
 
@@ -123,7 +123,7 @@ Because procs and lambdas aren't Marshal-able, and I didn't want to use somethin
 
 ## Changelog
 
-* 0.0.4 Added custom filters for ```next()``` and singular aliases for ```add_extension``` and ```add_pattern```
+* 0.0.4 Added custom filters for ```next_file()``` and singular aliases for ```add_extension``` and ```add_pattern```
 * 0.0.3 Fixed gemfile packaging
 * 0.0.2 Added scalable Bloom filter so ```Iterator#rescan``` is possible
 * 0.0.1 First `find`
