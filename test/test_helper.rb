@@ -19,6 +19,7 @@ def with_tmp_dir(&block)
   Dir.mktmpdir do |dir|
     Dir.chdir(dir)
     yield(Pathname.new dir)
+    Dir.chdir(cwd) # jruby needs us to cd out of the tmpdir so it can remove it
   end
 ensure
   Dir.chdir(cwd)
