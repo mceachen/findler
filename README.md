@@ -109,14 +109,13 @@ f.case_insensitive!
 f.add_filter(:exif_only)
 ```
 
-### Notes
+### Filter implementation notes
 
-* the child_dirs and child_files are arrays of ```Pathname```s that you can assume are absolute.
-* only child dirs and files that satisfy the ```extension``` and ```pattern``` filters will be seen by the filter class method.
-* the block needs to be given to each ```next_file``` call -- it is not memoized (nor could it be, as it would break Marshalling).
-* if a directory is found to be empty, the block will be called multiple times for a given call to ```next()```.
+* The array of ```Pathname``` instances can be assumed to be absolute.
+* Only child files that satisfy the ```extension``` and ```pattern``` filters will be seen by the filter class method.
+* If a directory doesn't have any relevant files, the filter method will be called multiple times for a given call to ```next_file()```.
 * if you want to be notified when new directories are walked into, and you want to do a bulk operation within that directory,
-  this gives you that hook -- just remember to return ```child_dirs + child_files``` at the end of your block.
+  this gives you that hook–-just remember to return the children array at the end of your block.
 
 ### Why can't ```filter_with``` be a proc?
 
