@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Findler by mceachen</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/main.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+
+      <header>
+        <h1>Findler</h1>
+        <p>A Ruby library for filesystem iteration with persistable state</p>
+      </header>
+
+      <div id="banner">
+        <span id="logo"></span>
+
+        <a href="https://github.com/mceachen/findler" class="button fork"><strong>Fork On GitHub</strong></a>
+        <div class="downloads">
+          <span>Downloads:</span>
+          <ul>
+            <li><a href="https://github.com/mceachen/findler/zipball/master" class="button">ZIP</a></li>
+            <li><a href="https://github.com/mceachen/findler/tarball/master" class="button">TAR</a></li>
+          </ul>
+        </div>
+
+      </div><!-- end banner -->
+
+    <div class="wrapper">
+      <nav>
+        <ul></ul>
+      </nav>
+      <section>
+        <p><a href="http://travis-ci.org/mceachen/findler"><img src="https://secure.travis-ci.org/mceachen/findler.png?branch=master" alt="Build Status"></a></p>
+
+<p>Findler is a Ruby library for iterating over a filtered set of files from a given
+path, written to be suitable with concurrent workers and very large
+filesystem hierarchies.</p>
+
+<h2>Usage</h2>
+
+<div class="highlight">
+<pre><span class="n">f</span> <span class="o">=</span> <span class="no">Findler</span><span class="o">.</span><span class="n">new</span> <span class="s2">"/Users/mrm"</span>
+<span class="n">f</span><span class="o">.</span><span class="n">add_extensions</span> <span class="s2">".jpg"</span><span class="p">,</span> <span class="s2">".jpeg"</span>
+<span class="n">iterator</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">iterator</span>
+<span class="n">iterator</span><span class="o">.</span><span class="n">next_file</span>
+<span class="c1"># =&gt; "/Users/mrm/Photos/img_1000.jpg"</span>
+</pre>
+</div>
+
+
+<h2>Cross-process continuations</h2>
+
+<p>This should smell an awful lot like <a href="https://github.com/sstephenson/hike">hike</a>,
+except for that last bit.</p>
+
+<p><code>Findler::Iterator</code> instances can be "paused" and "resumed" with <code>Marshal</code>.
+The entire state of the iteration for the filesystem is returned, which can then
+be pushed onto any durable storage, like ActiveRecord or Redis, or just a local file:</p>
+
+<div class="highlight">
+<pre><span class="no">File</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">'iterator.state'</span><span class="p">,</span> <span class="s1">'w'</span><span class="p">)</span> <span class="p">{</span> <span class="o">|</span><span class="n">f</span><span class="o">|</span> <span class="no">Marshal</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">iterator</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="p">}</span>
+</pre>
+</div>
+
+
+<p>To resume iteration:</p>
+
+<div class="highlight">
+<pre><span class="no">Marshal</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="no">IO</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">'iterator.state'</span><span class="p">))</span>
+<span class="n">iterator</span><span class="o">.</span><span class="n">next_file</span>
+<span class="c1"># =&gt; "/Users/mrm/Photos/img_1001.jpg"</span>
+</pre>
+</div>
+
+
+<p>To re-check a directory hierarchy for files that you haven't visited yet:</p>
+
+<div class="highlight">
+<pre><span class="n">iterator</span><span class="o">.</span><span class="n">rescan!</span>
+<span class="n">iterator</span><span class="o">.</span><span class="n">next_file</span>
+<span class="c1"># =&gt; "/Users/mrm/Photos/img_1002.jpg"</span>
+</pre>
+</div>
+
+
+<p>External synchronization between the serialized state of the
+iterator and the other processes will have to be done by you, of course.
+The <code>load</code>, <code>next_file</code> , and <code>dump</code> should be done while holding
+an iteration mutex of some sort.</p>
+
+<h2>Filtering and ordering</h2>
+
+<p>Filters provide custom exclusion and ordering criteria, so you don't
+have to do that logic in the code that consumes from your iterator.</p>
+
+<p>Filters can't be procs or lambdas because those aren't safely serializable.</p>
+
+<p>What you provide to <code>add_filter</code> is a symbolized name of a class method
+on <code>Findler::Filters</code>:</p>
+
+<div class="highlight">
+<pre><span class="n">f</span> <span class="o">=</span> <span class="no">Findler</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">"."</span><span class="p">)</span>
+<span class="n">f</span><span class="o">.</span><span class="n">add_filter</span> <span class="ss">:order_by_name</span>
+</pre>
+</div>
+
+
+<p>Note that the last filter added will be last to order the children, so it will be the
+"primary" sort criterion. Note also that the ordering is only done in
+the context of a given directory.</p>
+
+<h3>Implementing your own filter</h3>
+
+<p>Filter methods receive an array of <code>Pathname</code> instances. Those pathnames will:</p>
+
+<ol>
+<li>have the same parent</li>
+<li>will not have been enumerated by <code>next_file()</code> already</li>
+<li>will satisfy the settings given to the parent Findler instance, like <code>include_hidden</code>
+and added patterns.</li>
+</ol><p>Note that the last filter added will be last to order the children, so it will be the
+"primary" sort criterion.</p>
+
+<p>The returned values from the class method will be the final set of elements (both files
+and directories) that Findler will return from <code>next_file()</code>.</p>
+
+<h3>Example</h3>
+
+<p>To find files that have valid EXIF headers, using the <em>most</em> excellent
+<a href="https://github.com/mceachen/exiftoolr">exiftoolr</a> gem, you'd do this:</p>
+
+<div class="highlight">
+<pre><span class="nb">require</span> <span class="s1">'findler'</span>
+<span class="nb">require</span> <span class="s1">'exiftoolr'</span>
+
+<span class="c1"># Monkey-patch Filters to add our custom filter:</span>
+<span class="k">class</span> <span class="nc">Findler</span><span class="o">::</span><span class="no">Filters</span>
+  <span class="k">def</span> <span class="nc">self</span><span class="o">.</span><span class="nf">exif_only</span><span class="p">(</span><span class="n">children</span><span class="p">)</span>
+    <span class="n">child_files</span> <span class="o">=</span> <span class="n">children</span><span class="o">.</span><span class="n">select</span><span class="p">{</span><span class="o">|</span><span class="n">ea</span><span class="o">|</span><span class="n">ea</span><span class="o">.</span><span class="n">file?</span><span class="p">}</span>
+    <span class="n">child_dirs</span> <span class="o">=</span> <span class="n">children</span><span class="o">.</span><span class="n">select</span><span class="p">{</span><span class="o">|</span><span class="n">ea</span><span class="o">|</span><span class="n">ea</span><span class="o">.</span><span class="n">directory?</span><span class="p">}</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="no">Exiftoolr</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">child_files</span><span class="p">)</span>
+    <span class="n">e</span><span class="o">.</span><span class="n">files_with_results</span> <span class="o">+</span> <span class="n">child_dirs</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="no">Findler</span><span class="o">.</span><span class="n">new</span> <span class="s2">"/Users/mrm"</span>
+<span class="n">f</span><span class="o">.</span><span class="n">add_extensions</span> <span class="s2">".jpg"</span><span class="p">,</span> <span class="s2">".jpeg"</span><span class="p">,</span> <span class="s2">".cr2"</span><span class="p">,</span> <span class="s2">".nef"</span>
+<span class="n">f</span><span class="o">.</span><span class="n">case_insensitive!</span>
+<span class="n">f</span><span class="o">.</span><span class="n">add_filter</span><span class="p">(</span><span class="ss">:exif_only</span><span class="p">)</span>
+</pre>
+</div>
+
+
+<h3>Filter implementation notes</h3>
+
+<ul>
+<li>The array of <code>Pathname</code> instances can be assumed to be absolute.</li>
+<li>Only child files that satisfy the <code>extension</code> and <code>pattern</code> filters will be seen by the filter class method.</li>
+<li>If a directory doesn't have any relevant files, the filter method will be called multiple times for a given call to <code>next_file()</code>.</li>
+<li>if you want to be notified when new directories are walked into, and you want to do a bulk operation within that directory,
+this gives you that hook–-just remember to return the children array at the end of your block.</li>
+</ul><h3>Why can't <code>filter_with</code> be a proc?</h3>
+
+<p>Because procs and lambdas aren't Marshal-able, and I didn't want to use something scary like ruby2ruby and eval.</p>
+
+<h2>Changelog</h2>
+
+<ul>
+<li>0.0.4 Added custom filters for <code>next_file()</code> and singular aliases for <code>add_extension</code> and <code>add_pattern</code>
+</li>
+<li>0.0.3 Fixed gemfile packaging</li>
+<li>0.0.2 Added scalable Bloom filter so <code>Iterator#rescan</code> is possible</li>
+<li>0.0.1 First <code>find</code>
+</li>
+</ul>
+      </section>
+      <footer>
+        <p>Project maintained by <a href="https://github.com/mceachen">mceachen</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/#!/michigangraham">mattgraham</a></small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><!--<![endif]-->
+  </body>
+</html>
