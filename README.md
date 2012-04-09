@@ -123,7 +123,16 @@ Because procs and lambdas aren't Marshal-able, and I didn't want to use somethin
 
 ## Changelog
 
-* 0.0.4 Added custom filters for ```next_file()``` and singular aliases for ```add_extension``` and ```add_pattern```
-* 0.0.3 Fixed gemfile packaging
-* 0.0.2 Added scalable Bloom filter so ```Iterator#rescan``` is possible
-* 0.0.1 First `find`
+### 0.0.4
+ * Added custom filters for ```next_file()```
+ * Added singular aliases for ```add_extension``` and ```add_pattern```
+
+### 0.0.3
+ * Switch to minitest
+ * Gemfile packaging fix
+
+### 0.0.2
+ * Added scalable Bloom filter so ```Iterator#rescan``` is possible
+
+### 0.0.1
+ * Support for ```Marshal```ing and simple filters
