@@ -1,11 +1,8 @@
 require 'minitest/spec'
-require 'minitest/reporters'
 require 'minitest/autorun'
 require 'tmpdir'
 require 'fileutils'
 require 'findler'
-
-MiniTest::Reporters.use!
 
 def with_tmp_dir(&block)
   cwd = Dir.pwd
