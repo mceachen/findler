@@ -11,12 +11,12 @@ class Findler::Filters
 
   # order by the mtime of each file. Oldest files first.
   def self.order_by_mtime_asc(paths)
-    preserve_sort_by(paths)  { |ea| ea.mtime }
+    preserve_sort_by(paths)  { |ea| ea.mtime.to_i }
   end
 
   # reverse order by the mtime of each file. Newest files first.
   def self.order_by_mtime_desc(paths)
-    preserve_sort_by(paths)  { |ea| -ea.mtime }
+    preserve_sort_by(paths)  { |ea| -1 * ea.mtime.to_i }
   end
 
   # order by the name of each file.

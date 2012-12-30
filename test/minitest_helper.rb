@@ -74,3 +74,10 @@ def fs_case_sensitive?
     `rm CASETEST`
   end
 end
+
+ALPHANUMERIC = (('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a).freeze
+def rand_alphanumeric(length = 10)
+  (0..length).collect do
+    ALPHANUMERIC[rand(ALPHANUMERIC.length)]
+  end.join
+end

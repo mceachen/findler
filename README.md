@@ -104,9 +104,9 @@ class Findler::Filters
 end
 
 f = Findler.new "/Users/mrm"
-f.add_extensions ".jpg", ".jpeg", ".cr2", ".nef"
+f.add_extensions %w(.jpg .jpeg .cr2 .nef)
 f.case_insensitive!
-f.add_filter(:exif_only)
+f.add_filter :exif_only
 ```
 
 ### Filter implementation notes
@@ -122,6 +122,10 @@ f.add_filter(:exif_only)
 Because procs and lambdas aren't ```Marshal```able, and I didn't want to use something scary like ruby2ruby and eval.
 
 ## Changelog
+
+### 0.0.6
+ * ```add_filters``` takes an array, not a glob
+ * added tests for order_by_mtime filters
 
 ### 0.0.5
  * ```add_patterns``` and ```add_extensions``` take an array, not a glob

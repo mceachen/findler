@@ -199,7 +199,7 @@ describe Findler do
         :subdirs_per_dir => 1,
     }) do |dir|
       f = Findler.new(dir)
-      f.add_filters :order_by_name, :files_first
+      f.add_filters([:order_by_name, :files_first])
       expected = %W(tmp-0.a tmp-1.a dir-0/tmp-0.a dir-0/tmp-1.a)
       collect_files(f.iterator).must_equal expected
       f.add_filter :reverse
@@ -214,7 +214,7 @@ describe Findler do
         :subdirs_per_dir => 1,
     }) do |dir|
       f = Findler.new(dir)
-      f.add_filters :order_by_name, :directories_first
+      f.add_filters([:order_by_name, :directories_first])
       expected = %W(dir-0/tmp-0.a dir-0/tmp-1.a tmp-0.a tmp-1.a)
       collect_files(f.iterator).must_equal expected
       f.add_filter :reverse

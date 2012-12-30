@@ -86,7 +86,7 @@ class Findler
     (@filters ||= [])
   end
 
-  def add_filters(*filter_symbols)
+  def add_filters(filter_symbols)
     filter_symbols.each { |ea| add_filter(ea) }
   end
 
