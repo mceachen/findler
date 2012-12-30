@@ -1,4 +1,4 @@
-require 'test_helper'
+require 'minitest_helper'
 
 class Findler::Filters
   def self.non_empty_files(children)

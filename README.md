@@ -96,8 +96,8 @@ require 'exiftoolr'
 # Monkey-patch Filters to add our custom filter:
 class Findler::Filters
   def self.exif_only(children)
-    child_files = children.select{|ea|ea.file?}
-    child_dirs = children.select{|ea|ea.directory?}
+    child_files = children.select { |ea| ea.file? }
+    child_dirs = children.select { |ea| ea.directory? }
     e = Exiftoolr.new(child_files)
     e.files_with_results + child_dirs
   end
@@ -117,11 +117,14 @@ f.add_filter(:exif_only)
 * if you want to be notified when new directories are walked into, and you want to do a bulk operation within that directory,
   this gives you that hook–-just remember to return the children array at the end of your block.
 
-### Why can't ```filter_with``` be a proc?
+## Why can't ```filter_with``` be a proc?
 
-Because procs and lambdas aren't Marshal-able, and I didn't want to use something scary like ruby2ruby and eval.
+Because procs and lambdas aren't ```Marshal```able, and I didn't want to use something scary like ruby2ruby and eval.
 
 ## Changelog
+
+### 0.0.5
+ * ```add_patterns``` and ```add_extensions``` take an array, not a glob
 
 ### 0.0.4
  * Added custom filters for ```next_file()```

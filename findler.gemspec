@@ -2,26 +2,24 @@
 $:.push File.expand_path("../lib", __FILE__)
 require "findler/version"
 
-Gem::Specification.new do |s|
-  s.name = "findler"
-  s.version = Findler::VERSION
-  s.authors = ["Matthew McEachen"]
-  s.email = ["matthew+github@mceachen.org"]
-  s.homepage = "https://github.com/mceachen/findler/"
-  s.summary = %q{Findler is a stateful filesystem iterator}
-  s.description = %q{Findler is designed for very large filesystem hierarchies,
+Gem::Specification.new do |gem|
+  gem.name = "findler"
+  gem.version = Findler::VERSION
+  gem.authors = ["Matthew McEachen"]
+  gem.email = ["matthew+github@mceachen.org"]
+  gem.homepage = "https://github.com/mceachen/findler/"
+  gem.summary = %q{Findler is a stateful filesystem iterator}
+  gem.description = %q{Findler is designed for very large filesystem hierarchies,
   where simple block processing, or returning an array of matches, just isn't feasible.
   Usage instructions are available in the README.}
 
-  s.rubyforge_project = "findler"
-
-  s.files = `git ls-files`.split("\n")
-  s.test_files = `git ls-files -- {test,test,features}/*`.split("\n")
-  s.executables = `git ls-files -- bin/*`.split("\n").map { |f| File.basename(f) }
-  s.require_paths = ["lib"]
-  s.add_development_dependency "rake"
-  s.add_development_dependency "yard"
-  s.add_development_dependency "minitest"
-  s.add_development_dependency "minitest-reporters"
-  s.add_dependency "bloomer"
+  gem.files = `git ls-files`.split("\n")
+  gem.test_files = `git ls-files -- {test,features}/*`.split("\n")
+  gem.executables = `git ls-files -- bin/*`.split("\n").map { |f| File.basename(f) }
+  gem.require_paths = ["lib"]
+  gem.add_development_dependency "rake"
+  gem.add_development_dependency "yard"
+  gem.add_development_dependency "minitest"
+  gem.add_development_dependency "minitest-reporters"
+  gem.add_dependency "bloomer"
 end

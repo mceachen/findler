@@ -5,14 +5,7 @@ require 'tmpdir'
 require 'fileutils'
 require 'findler'
 
-MiniTest::Unit.runner = MiniTest::SuiteRunner.new
-if ENV["RM_INFO"] || ENV["TEAMCITY_VERSION"]
-  MiniTest::Unit.runner.reporters << MiniTest::Reporters::RubyMineReporter.new
-elsif ENV['TM_PID']
-  MiniTest::Unit.runner.reporters << MiniTest::Reporters::RubyMateReporter.new
-else
-  MiniTest::Unit.runner.reporters << MiniTest::Reporters::ProgressReporter.new
-end
+MiniTest::Reporters.use!
 
 def with_tmp_dir(&block)
   cwd = Dir.pwd

@@ -19,7 +19,7 @@ class Findler
     @patterns ||= []
   end
 
-  def add_patterns(*patterns)
+  def add_patterns(patterns)
     self.patterns += patterns
   end
 
@@ -31,7 +31,7 @@ class Findler
     add_pattern "*#{normalize_extension(extension)}"
   end
 
-  def add_extensions(*extensions)
+  def add_extensions(extensions)
     extensions.each { |ea| add_extension(ea) }
   end
 

@@ -1,4 +1,4 @@
-require 'test_helper'
+require 'minitest_helper'
 
 describe Findler::Filters do
   it "should preserve sort order with no result" do
