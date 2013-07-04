@@ -35,10 +35,7 @@ class Findler
         @sub_iter = nil
       end
 
-      begin
-        nxt = children.shift
-      end while !nxt.nil? && !nxt.exist?
-
+      nxt = next_child
       return nil if nxt.nil?
 
       if nxt.directory?
@@ -51,6 +48,13 @@ class Findler
     end
 
     private
+
+    def next_child
+      begin
+        nxt = children.shift
+      end while !nxt.nil? && !nxt.exist?
+      nxt
+    end
 
     def filter(children, filter_symbol)
       filtered_children = filters_class.send(filter_symbol, children)
