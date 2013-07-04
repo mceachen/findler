@@ -32,7 +32,7 @@ File.open('iterator.state', 'wb') { |f| Marshal.dump(iterator, f) }
 To resume iteration:
 
 ```ruby
-iterator2 = Marshal.load(IO.open('iterator.state', 'rb'))
+iterator2 = Marshal.load(File.open('iterator.state', 'rb'))
 iterator2.next_file
 # => "/Users/mrm/Photos/img_1001.jpg"
 ```
