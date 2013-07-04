@@ -95,21 +95,6 @@ describe Findler do
     end
   end
 
-  it "should find new files after a rescan" do
-    with_tree([".txt", ".no"]) do |dir|
-      f = Findler.new(dir)
-      f.add_extension ".txt"
-      iter = f.iterator
-      collect_files(iter).sort.must_equal `find * -type f -iname \\*.txt`.split.sort
-      FileUtils.touch(dir + "dir-0" + "dir-1" + "new-0.txt")
-      FileUtils.touch(dir + "dir-1" + "dir-0" + "new-1.txt")
-      FileUtils.touch(dir + "dir-2" + "dir-2" + "new-2.txt")
-      collect_files(iter).must_be_empty
-      iter.rescan!
-      collect_files(iter).sort.must_equal ["dir-0/dir-1/new-0.txt", "dir-1/dir-0/new-1.txt", "dir-2/dir-2/new-2.txt"]
-    end
-  end
-
   it "should not return files removed after iteration started" do
     with_tree([".txt"]) do |dir|
       f = Findler.new(dir)

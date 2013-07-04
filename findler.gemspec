@@ -20,5 +20,4 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency "rake"
   gem.add_development_dependency "yard"
   gem.add_development_dependency "minitest"
-  gem.add_dependency "bloomer"
 end

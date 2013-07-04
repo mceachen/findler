@@ -1,8 +1,8 @@
-class Findler
+require "findler/error"
+require "findler/filters"
+require "findler/iterator"
 
-  autoload :Iterator, "findler/iterator"
-  autoload :Error, "findler/error"
-  require "findler/filters"
+class Findler
 
   IGNORE_CASE = 1
   INCLUDE_HIDDEN = 2

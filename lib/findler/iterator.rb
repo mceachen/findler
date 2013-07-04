@@ -1,4 +1,3 @@
-require 'bloomer'
 require 'pathname'
 
 class Findler
@@ -13,8 +12,8 @@ class Findler
       @path = @path.expand_path unless @path.absolute?
       @parent = parent
 
-      set_inheritable_ivar(:visited_dirs, attrs) { self.class.new_presence_collection }
-      set_inheritable_ivar(:visited_files, attrs) { self.class.new_presence_collection }
+      @visited_dirs = Set.new
+      @visited_files = Set.new
       set_inheritable_ivar(:patterns, attrs) { nil }
       set_inheritable_ivar(:flags, attrs) { 0 }
       set_inheritable_ivar(:filters, attrs) { [] }
@@ -22,14 +21,6 @@ class Findler
       set_inheritable_ivar(:sort_with, attrs) { nil }
 
       @sub_iter = self.class.new(attrs[:sub_iter], self) if attrs[:sub_iter]
-    end
-
-    # Visit this directory and all sub directories, and check for unseen files. Only call on the root iterator.
-    def rescan!
-      raise Error, "Only invoke on root" unless @parent.nil?
-      @visited_dirs = self.class.new_presence_collection
-      @children = nil
-      @sub_iter = nil
     end
 
     def ignore_case?
@@ -81,15 +72,15 @@ class Findler
         @sub_iter = Iterator.new({:path => nxt}, self)
         self.next_file
       else
-        @visited_files.add nxt.to_s
+        @visited_files.add(pathname_as_key(nxt))
         nxt
       end
     end
 
     private
 
-    def self.new_presence_collection
-      Bloomer::Scalable.new(256, 1.0/1_000_000)
+    def pathname_as_key(pathname)
+      pathname.basename.to_s
     end
 
     def filter(children, filter_symbol)
@@ -120,15 +111,16 @@ class Findler
       pathname.basename.to_s.start_with?(".")
     end
 
-    def skip? pathname
+    def skip?(pathname)
       s = pathname.to_s
+      k = pathname_as_key(pathname)
       return true if !include_hidden? && hidden?(pathname)
-      return visited_dirs.include?(s) if pathname.directory?
-      return true if visited_files.include?(s)
+      return visited_dirs.include?(k) if pathname.directory?
+      return true if visited_files.include?(k)
       unless patterns.nil?
         return true if patterns.none? { |p| pathname.fnmatch(p, fnmatch_flags) }
       end
-      return false
+      false
     end
   end
 end

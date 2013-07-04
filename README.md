@@ -37,14 +37,6 @@ iterator.next_file
 # => "/Users/mrm/Photos/img_1001.jpg"
 ```
 
-To re-check a directory hierarchy for files that you haven't visited yet:
-
-```ruby
-iterator.rescan!
-iterator.next_file
-# => "/Users/mrm/Photos/img_1002.jpg"
-```
-
 External synchronization between the serialized state of the
 iterator and the other processes will have to be done by you, of course.
 The ```load```, ```next_file``` , and ```dump``` should be done while holding
@@ -122,6 +114,11 @@ f.add_filter :exif_only
 Because procs and lambdas aren't ```Marshal```able, and I didn't want to use something scary like ruby2ruby and eval.
 
 ## Changelog
+
+### 0.0.7
+ * Use a non-inherited set per iterator, rather than a global bloom filter
+ * Removed the ability to "rescan" due to the weight of the bloom filter in marshalling when
+   traversing an enormous tree.
 
 ### 0.0.6
  * ```add_filters``` takes an array, not a glob
