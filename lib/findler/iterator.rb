@@ -70,10 +70,7 @@ class Findler
       return true if !include_hidden? && Path.hidden?(pathname)
       return @visited_dirs.include?(k) if pathname.directory?
       return true if @visited_files.include?(k)
-      unless patterns.empty?
-        return true if patterns.none? { |p| pathname.fnmatch(p, fnmatch_flags) }
-      end
-      false
+      @configuration.skip?(pathname)
     end
   end
 end

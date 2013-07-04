@@ -114,6 +114,14 @@ class Findler
     Iterator.new(self, path)
   end
 
+  def skip?(pathname)
+    if patterns.empty?
+      false
+    else
+      patterns.none? { |p| pathname.fnmatch(p, fnmatch_flags) }
+    end
+  end
+
   private
 
   def normalize_extension(extension)
