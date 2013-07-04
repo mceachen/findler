@@ -4,8 +4,10 @@ require 'tmpdir'
 require 'fileutils'
 require 'findler'
 
-require 'minitest/reporters'
-MiniTest::Reporters.use!
+unless ENV['CI']
+  require 'minitest/reporters'
+  MiniTest::Reporters.use!
+end
 
 def with_tmp_dir(&block)
   cwd = Dir.pwd
@@ -27,13 +29,13 @@ end
 
 def mk_tree(target_dir, options)
   opts = {
-      :depth => 3,
-      :files_per_dir => 3,
-      :subdirs_per_dir => 3,
-      :prefix => 'tmp',
-      :suffix => '',
-      :dir_prefix => 'dir',
-      :dir_suffix => ''
+    :depth => 3,
+    :files_per_dir => 3,
+    :subdirs_per_dir => 3,
+    :prefix => 'tmp',
+    :suffix => '',
+    :dir_prefix => 'dir',
+    :dir_suffix => ''
   }.merge options
   p = target_dir.is_a?(Pathname) ? target_dir : Pathname.new(target_dir)
   p.mkdir unless p.exist?
@@ -82,6 +84,7 @@ def fs_case_sensitive?
 end
 
 ALPHANUMERIC = (('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a).freeze
+
 def rand_alphanumeric(length = 10)
   (0..length).collect do
     ALPHANUMERIC[rand(ALPHANUMERIC.length)]
