@@ -1,14 +1,17 @@
-require "findler/error"
-require "findler/filters"
-require "findler/iterator"
+require 'findler/error'
+require 'findler/filters'
+require 'findler/iterator'
+require 'findler/path'
 
 class Findler
 
   IGNORE_CASE = 1
   INCLUDE_HIDDEN = 2
 
+  attr_reader :path
+
   def initialize(path)
-    @path = path
+    @path = Path.clean(path)
     @flags = 0
   end
 
@@ -45,6 +48,14 @@ class Findler
     @flags |= IGNORE_CASE
   end
 
+  def ignore_case?
+    (IGNORE_CASE & @flags) > 0
+  end
+
+  def include_hidden?
+    (INCLUDE_HIDDEN & @flags) > 0
+  end
+
   # Should we traverse hidden directories and files? (default is to skip files that start
   # with a '.')
   def include_hidden!
@@ -55,14 +66,23 @@ class Findler
     @flags &= ~INCLUDE_HIDDEN
   end
 
-  def filter_class
-    (@filter_class ||= Filters)
+  def fnmatch_flags
+    @fnmatch_flags ||= begin
+      f = 0
+      f |= File::FNM_CASEFOLD if ignore_case?
+      f |= File::FNM_DOTMATCH if include_hidden?
+      f
+    end
   end
 
-  def filter_class=(new_filter_class)
-    raise Error unless new_filter_class.is_a? Class
-    filters.each{|ea|new_filter_class.method(ea)} # verify the filters class has those methods defined
-    @filter_class = new_filter_class
+  def filters_class
+    (@filters_class ||= Filters)
+  end
+
+  def filters_class=(new_filters_class)
+    raise Error unless new_filters_class.is_a? Class
+    filters.each { |ea| new_filters_class.method(ea) } # verify the filters class has those methods defined
+    @filters_class = new_filters_class
   end
 
   # Accepts symbols whose names are class methods on Finder::Filters.
@@ -78,12 +98,12 @@ class Findler
   # Note that the last filter added will be last to order the children, so it will be the
   # "primary" sort criterion.
   def add_filter(filter_symbol)
-    filter_class.method(filter_symbol)
+    filters_class.method(filter_symbol)
     filters << filter_symbol
   end
 
   def filters
-    (@filters ||= [])
+    @filters ||= []
   end
 
   def add_filters(filter_symbols)
@@ -91,10 +111,7 @@ class Findler
   end
 
   def iterator
-    Iterator.new(:path => @path,
-                 :patterns => @patterns,
-                 :flags => @flags,
-                 :filters => @filters)
+    Iterator.new(self, path)
   end
 
   private

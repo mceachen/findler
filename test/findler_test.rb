@@ -24,11 +24,14 @@ describe Findler do
   end
 
   it "should detect hidden files properly" do
-    i = Findler::Iterator.new(:path => "/tmp")
-    i.send(:hidden?, Pathname.new("/a/b")).must_equal false
-    i.send(:hidden?, Pathname.new("/a/.b")).must_equal true
-    i.send(:hidden?, Pathname.new("/.a/.b")).must_equal true
-    i.send(:hidden?, Pathname.new("/.a/b")).must_equal false
+    %w(/a/b /.a/b).each do |ea|
+      p = Pathname.new(ea)
+      Findler::Path.hidden?(p).must_be_false
+    end
+    %w(/a/.b /a/.b).each do |ea|
+      p = Pathname.new(ea)
+      Findler::Path.hidden?(p).must_be_true
+    end
   end
 
   it "should skip hidden files by default" do
@@ -49,11 +52,11 @@ describe Findler do
     with_tree(%W(.jpg .txt)) do |dir|
       touch_secrets
       f = Findler.new(dir)
-      collect_files(f.iterator).sort.must_equal `find * -type f -not -name '.*'`.split.sort
+      collect_files(f.iterator).must_equal_contents `find * -type f -not -name '.*'`.split
       f.exclude_hidden! # should be a no-op
-      collect_files(f.iterator).sort.must_equal `find * -type f -not -name '.*'`.split.sort
+      collect_files(f.iterator).must_equal_contents `find * -type f -not -name '.*'`.split
       f.include_hidden!
-      collect_files(f.iterator).sort.must_equal `find . -type f | sed -e 's/^\\.\\///'`.split.sort
+      collect_files(f.iterator).must_equal_contents `find . -type f | sed -e 's/^\\.\\///'`.split
     end
   end
 
@@ -63,10 +66,10 @@ describe Findler do
       f.add_extension ".jpg"
       if fs_case_sensitive?
         f.case_sensitive!
-        collect_files(f.iterator).sort.must_equal `find * -type f -name \\*.jpg`.split.sort
+        collect_files(f.iterator).must_equal_contents `find * -type f -name \\*.jpg`.split
       end
       f.case_insensitive!
-      collect_files(f.iterator).sort.must_equal `find * -type f -iname \\*.jpg`.split.sort
+      collect_files(f.iterator).must_equal_contents `find * -type f -iname \\*.jpg`.split
     end
   end
 
@@ -76,22 +79,7 @@ describe Findler do
       f.add_extension ".jpg"
       f.case_insensitive!
       iter = f.iterator
-      collect_files(iter).sort.must_equal `find * -type f -iname \\*.jpg`.split.sort
-    end
-  end
-
-  it "should find files added after iteration started" do
-    with_tree(%W(.txt)) do |dir|
-      f = Findler.new(dir)
-      iter = f.iterator
-      iter.next_file.wont_be_nil
-
-      # cheating with mtime on the touch doesn't properly update the parent directory ctime,
-      # so we have to deal with the second-granularity resolution of the filesystem.
-      sleep(1.1)
-
-      FileUtils.touch(dir + "new.txt")
-      collect_files(iter).must_include("new.txt")
+      collect_files(iter).must_equal_contents `find * -type f -iname \\*.jpg`.split
     end
   end
 
@@ -100,8 +88,6 @@ describe Findler do
       f = Findler.new(dir)
       iter = f.iterator
       iter.next_file.wont_be_nil
-      sleep(1.1) # see above for hand-wringing-defense of this atrocity
-
       (dir + "tmp-1.txt").unlink
       collect_files(iter).wont_include("tmp-1.txt")
     end
@@ -116,14 +102,19 @@ describe Findler do
         f.case_insensitive!
         iter_a = f.iterator
         files_a = i.times.collect { relative_path(iter_a.path, iter_a.next_file) }
-        iter_b = Marshal.load(Marshal.dump(iter_a))
+        iter_b = marshal_round_trip(iter_a)
         files_b = collect_files(iter_b)
 
-        iter_c = Marshal.load(Marshal.dump(iter_b))
-        collect_files(iter_c)
-        iter_c.next_file.must_be_nil
+        files_a.wont_include_any files_b
+        files_b.wont_include_any files_a
+        (files_a + files_b).must_equal_contents all_files
 
-        (files_a + files_b).sort.must_equal all_files.sort
+        # iter_b should be "exhausted" now.
+        collect_files(iter_b).must_be_empty
+
+        # and "exhaustion" should survive marshalling:
+        iter_c = marshal_round_trip(iter_b)
+        collect_files(iter_c).must_be_empty
       end
     end
   end
@@ -162,7 +153,7 @@ describe Findler do
       f.add_filter :files_to_s
       iter = f.iterator
       files = collect_files(iter)
-      files.sort.must_equal `find * -type f`.split.sort
+      files.must_equal_contents `find * -type f`.split
     end
   end
 
@@ -173,15 +164,15 @@ describe Findler do
       f.add_filter :non_empty_files
       iter = f.iterator
       files = collect_files(iter)
-      files.sort.must_equal `find * -type f -name \\*.a`.split.sort
+      files.must_equal_contents `find * -type f -name \\*.a`.split
     end
   end
 
   it "should support files_first ordering" do
     with_tree(%W(.a), {
-        :depth => 2,
-        :files_per_dir => 2,
-        :subdirs_per_dir => 1,
+      :depth => 2,
+      :files_per_dir => 2,
+      :subdirs_per_dir => 1,
     }) do |dir|
       f = Findler.new(dir)
       f.add_filters([:order_by_name, :files_first])
@@ -194,9 +185,9 @@ describe Findler do
 
   it "should support directory_first ordering" do
     with_tree(%W(.a), {
-        :depth => 2,
-        :files_per_dir => 2,
-        :subdirs_per_dir => 1,
+      :depth => 2,
+      :files_per_dir => 2,
+      :subdirs_per_dir => 1,
     }) do |dir|
       f = Findler.new(dir)
       f.add_filters([:order_by_name, :directories_first])

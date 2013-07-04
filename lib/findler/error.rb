@@ -1,2 +1,4 @@
-class Findler::Error < StandardError
+class Findler
+  class Error < StandardError
+  end
 end

@@ -26,14 +26,14 @@ The entire state of the iteration for the filesystem is returned, which can then
 be pushed onto any durable storage, like ActiveRecord or Redis, or just a local file:
 
 ```ruby
-File.open('iterator.state', 'w') { |f| Marshal.dump(iterator, f) }
+File.open('iterator.state', 'wb') { |f| Marshal.dump(iterator, f) }
 ```
 
 To resume iteration:
 
 ```ruby
-Marshal.load(IO.open('iterator.state'))
-iterator.next_file
+iterator2 = Marshal.load(IO.open('iterator.state', 'rb'))
+iterator2.next_file
 # => "/Users/mrm/Photos/img_1001.jpg"
 ```
 
@@ -119,6 +119,7 @@ Because procs and lambdas aren't ```Marshal```able, and I didn't want to use som
  * Use a non-inherited set per iterator, rather than a global bloom filter
  * Removed the ability to "rescan" due to the weight of the bloom filter in marshalling when
    traversing an enormous tree.
+ * Fixed marshal documentation and tests to support ruby 1.9+
 
 ### 0.0.6
  * ```add_filters``` takes an array, not a glob

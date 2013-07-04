@@ -1,8 +1,11 @@
-require 'minitest/spec'
 require 'minitest/autorun'
+require 'minitest/great_expectations'
 require 'tmpdir'
 require 'fileutils'
 require 'findler'
+
+require 'minitest/reporters'
+MiniTest::Reporters.use!
 
 def with_tmp_dir(&block)
   cwd = Dir.pwd
@@ -27,10 +30,10 @@ def mk_tree(target_dir, options)
       :depth => 3,
       :files_per_dir => 3,
       :subdirs_per_dir => 3,
-      :prefix => "tmp",
-      :suffix => "",
-      :dir_prefix => "dir",
-      :dir_suffix => ""
+      :prefix => 'tmp',
+      :suffix => '',
+      :dir_prefix => 'dir',
+      :dir_suffix => ''
   }.merge options
   p = target_dir.is_a?(Pathname) ? target_dir : Pathname.new(target_dir)
   p.mkdir unless p.exist?
@@ -55,9 +58,15 @@ def relative_path(parent, pathname)
   pathname.relative_path_from(parent).to_s
 end
 
+def marshal_round_trip(iter)
+  output = "#{rand_alphanumeric}.ser"
+  File.open(output, 'wb') { |io| Marshal.dump(iter, io) }
+  Marshal.load(File.open(output, 'rb'))
+end
+
 def collect_files(iter)
   files = []
-  while nxt = iter.next_file
+  while (nxt = iter.next_file)
     files << relative_path(iter.path, nxt)
   end
   files
