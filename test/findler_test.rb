@@ -23,7 +23,7 @@ describe Findler do
     `mkdir .hide ; touch .outer-hide dir-0/.hide .hide/normal.txt .hide/.secret`
   end
 
-  it "should detect hidden files properly" do
+  it "detects hidden files properly" do
     %w(/a/b /.a/b).each do |ea|
       p = Pathname.new(ea)
       Findler::Path.hidden?(p).must_be_false
@@ -34,7 +34,7 @@ describe Findler do
     end
   end
 
-  it 'should skip hidden files by default' do
+  it 'skips hidden files by default' do
     with_tmp_dir do |dir|
       visible = (dir + rand_alphanumeric).tap { |ea| ea.touch }
       hidden = (dir + ".#{rand_alphanumeric}").tap { |ea| ea.touch }
@@ -47,7 +47,7 @@ describe Findler do
     end
   end
 
-  it 'should find all non-hidden files by default' do
+  it 'finds all non-hidden files by default' do
     with_tree(%W(.jpg .txt)) do |dir|
       touch_secrets
       f = Findler.new(dir)
@@ -59,7 +59,7 @@ describe Findler do
     end
   end
 
-  it 'should find only .jpg files when constrained' do
+  it 'finds only .jpg files when constrained' do
     with_tree(%W(.jpg .txt .JPG)) do |dir|
       f = Findler.new(dir)
       f.add_extension ".jpg"
@@ -72,7 +72,7 @@ describe Findler do
     end
   end
 
-  it 'should find .jpg or .JPG files when constrained' do
+  it 'finds .jpg or .JPG files when constrained' do
     with_tree(%w(.jpg .txt .JPG)) do |dir|
       f = Findler.new(dir)
       f.add_extension ".jpg"
@@ -82,18 +82,30 @@ describe Findler do
     end
   end
 
+  it 'finds files added after iteration started' do
+    with_tree(%W(.txt)) do |dir|
+      f = Findler.new(dir)
+      iter = f.iterator
+      iter.next_file.wont_be_nil
+      sleep(1.1) # <- deal with the second-granularity resolution of the filesystem
+      (dir + 'new.txt').touch
+      collect_files(iter).must_include('new.txt')
+    end
+  end
+
   it 'should not return files removed after iteration started' do
     with_tree(%w(.txt)) do |dir|
       f = Findler.new(dir)
       iter = f.iterator
       iter.next_file.wont_be_nil
       sleep(1.1) # < make sure mtime change will be detected (which only has second resolution)
-      (dir + "tmp-1.txt").unlink
+      (dir + 'tmp-1.txt').unlink
       collect_files(iter).wont_include("tmp-1.txt")
     end
   end
 
-  it 'should dump/load in the middle of iterating' do
+
+  it 'dump/loads in the middle of iterating' do
     with_tree(%w(.jpg .txt .JPG)) do |dir|
       all_files = `find * -type f -iname \\*.jpg`.split
       all_files.size.times do |i|
@@ -119,7 +131,7 @@ describe Findler do
     end
   end
 
-  it 'should create an iterator even for a non-existent directory' do
+  it 'creates an iterator even for a non-existent directory' do
     tmpdir = nil
     Dir.mktmpdir do |dir|
       tmpdir = Pathname.new dir
@@ -129,7 +141,7 @@ describe Findler do
     collect_files(f.iterator).must_be_empty
   end
 
-  it 'should raise an error if the block given to next_file returns nil' do
+  it 'raises an error if the block given to next_file returns nil' do
     Dir.mktmpdir do |dir|
       f = Findler.new(dir)
       f.add_filter :no_return
@@ -156,7 +168,7 @@ describe Findler do
     end
   end
 
-  it 'should support next_file blocks properly' do
+  it 'supports next_file blocks properly' do
     with_tree(%W(.a .b)) do |dir|
       Dir["**/*.a"].each { |ea| File.open(ea, 'w') { |f| f.write("hello") } }
       f = Findler.new(dir)
@@ -167,7 +179,7 @@ describe Findler do
     end
   end
 
-  it 'should support files_first ordering' do
+  it 'supports files_first ordering' do
     with_tree(%W(.a), {
       :depth => 2,
       :files_per_dir => 2,
@@ -182,7 +194,7 @@ describe Findler do
     end
   end
 
-  it 'should support directory_first ordering' do
+  it 'supports directory_first ordering' do
     with_tree(%W(.a), {
       :depth => 2,
       :files_per_dir => 2,
