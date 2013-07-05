@@ -15,8 +15,8 @@ class Findler
     @flags = 0
   end
 
-  # These are File.fnmatch patterns.
-  # If any pattern matches, it will be returned by Iterator#next.
+  # These are File.fnmatch patterns, and are only applied to files, not directories.
+  # If any pattern matches, it will be returned by Iterator#next_file.
   # (see File.fnmatch?)
   def patterns
     @patterns ||= []
@@ -98,7 +98,6 @@ class Findler
   # Note that the last filter added will be last to order the children, so it will be the
   # "primary" sort criterion.
   def add_filter(filter_symbol)
-    filters_class.method(filter_symbol)
     filters << filter_symbol
   end
 
@@ -114,15 +113,37 @@ class Findler
     Iterator.new(self, path)
   end
 
-  def skip?(pathname)
-    if patterns.empty?
-      false
-    else
-      patterns.none? { |p| pathname.fnmatch(p, fnmatch_flags) }
+  private
+
+  def filter_paths(pathnames)
+    viable_paths = pathnames.select { |ea| viable_path?(ea) }
+    filters.inject(viable_paths) do |paths, filter_symbol|
+      apply_filter(paths, filter_symbol)
     end
   end
 
-  private
+  # Should the given file or directory be iterated over?
+  def viable_path?(pathname)
+    return false if !pathname.exist?
+    return false if !include_hidden? && Path.hidden?(pathname)
+    if patterns.empty? || pathname.directory?
+      true
+    else
+      patterns.any? { |p| pathname.fnmatch(p, fnmatch_flags) }
+    end
+  end
+
+  def apply_filter(pathnames, filter_method_sym)
+    filtered_pathnames = filters_class.send(filter_method_sym, pathnames.dup)
+    unless filtered_pathnames.respond_to? :map
+      raise Error, "#{filters_class}.#{filter_method_sym} did not return an Enumerable"
+    end
+    unexpected_paths = filtered_pathnames - pathnames
+    unless unexpected_paths.empty?
+      raise Error, "#{filters_class}.#{filter_method_sym} returned unexpected paths: #{unexpected_paths.collect { |ea| ea.to_s }.join(",")}"
+    end
+    filtered_pathnames
+  end
 
   def normalize_extension(extension)
     if extension.nil? || extension.empty? || extension.start_with?(".")

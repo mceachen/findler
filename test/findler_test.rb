@@ -9,7 +9,7 @@ class Findler::Filters
   end
 
   def self.invalid_return(children)
-    "/invalid/file"
+    Pathname.new('/invalid/file')
   end
 
   def self.files_to_s(children)
@@ -34,21 +34,20 @@ describe Findler do
     end
   end
 
-  it "should skip hidden files by default" do
-    i = Findler.new("/tmp").iterator
-    i.send(:skip?, Pathname.new("/tmp/not-hidden")).must_equal false
-    i.send(:skip?, Pathname.new("/tmp/.hidden")).must_equal true
+  it 'should skip hidden files by default' do
+    with_tmp_dir do |dir|
+      visible = (dir + rand_alphanumeric).tap { |ea| ea.touch }
+      hidden = (dir + ".#{rand_alphanumeric}").tap { |ea| ea.touch }
+      f = Findler.new(dir)
+      f.send(:viable_path?, visible).must_equal true
+      f.send(:viable_path?, hidden).must_equal false
+      f.include_hidden!
+      f.send(:viable_path?, visible).must_equal true
+      f.send(:viable_path?, hidden).must_equal true
+    end
   end
 
-  it "should not skip hidden files when set" do
-    f = Findler.new("/tmp")
-    f.include_hidden!
-    i = f.iterator
-    i.send(:skip?, Pathname.new("/tmp/not-hidden")).must_equal false
-    i.send(:skip?, Pathname.new("/tmp/.hidden")).must_equal false
-  end
-
-  it "should find all non-hidden files by default" do
+  it 'should find all non-hidden files by default' do
     with_tree(%W(.jpg .txt)) do |dir|
       touch_secrets
       f = Findler.new(dir)
@@ -60,7 +59,7 @@ describe Findler do
     end
   end
 
-  it "should find only .jpg files when constrained" do
+  it 'should find only .jpg files when constrained' do
     with_tree(%W(.jpg .txt .JPG)) do |dir|
       f = Findler.new(dir)
       f.add_extension ".jpg"
@@ -73,8 +72,8 @@ describe Findler do
     end
   end
 
-  it "should find .jpg or .JPG files when constrained" do
-    with_tree(%W(.jpg .txt .JPG)) do |dir|
+  it 'should find .jpg or .JPG files when constrained' do
+    with_tree(%w(.jpg .txt .JPG)) do |dir|
       f = Findler.new(dir)
       f.add_extension ".jpg"
       f.case_insensitive!
@@ -83,18 +82,19 @@ describe Findler do
     end
   end
 
-  it "should not return files removed after iteration started" do
-    with_tree([".txt"]) do |dir|
+  it 'should not return files removed after iteration started' do
+    with_tree(%w(.txt)) do |dir|
       f = Findler.new(dir)
       iter = f.iterator
       iter.next_file.wont_be_nil
+      sleep(1.1) # < make sure mtime change will be detected (which only has second resolution)
       (dir + "tmp-1.txt").unlink
       collect_files(iter).wont_include("tmp-1.txt")
     end
   end
 
-  it "should dump/load in the middle of iterating" do
-    with_tree(%W(.jpg .txt .JPG)) do |dir|
+  it 'should dump/load in the middle of iterating' do
+    with_tree(%w(.jpg .txt .JPG)) do |dir|
       all_files = `find * -type f -iname \\*.jpg`.split
       all_files.size.times do |i|
         f = Findler.new(dir)
@@ -119,7 +119,7 @@ describe Findler do
     end
   end
 
-  it "should create an iterator even for a non-existent directory" do
+  it 'should create an iterator even for a non-existent directory' do
     tmpdir = nil
     Dir.mktmpdir do |dir|
       tmpdir = Pathname.new dir
@@ -129,7 +129,7 @@ describe Findler do
     collect_files(f.iterator).must_be_empty
   end
 
-  it "should raise an error if the block given to next_file returns nil" do
+  it 'should raise an error if the block given to next_file returns nil' do
     Dir.mktmpdir do |dir|
       f = Findler.new(dir)
       f.add_filter :no_return
@@ -138,7 +138,7 @@ describe Findler do
     end
   end
 
-  it "should raise an error if the block returns non-children" do
+  it 'raises an error if the block returns non-children' do
     with_tree(%W(.txt)) do |dir|
       f = Findler.new(dir)
       f.add_filter :invalid_return
@@ -147,17 +147,16 @@ describe Findler do
     end
   end
 
-  it "should support filter_with against global/Kernel methods" do
+  it 'raises error when filter methods return strings' do
     with_tree(%W(.txt)) do |dir|
       f = Findler.new(dir)
       f.add_filter :files_to_s
-      iter = f.iterator
-      files = collect_files(iter)
-      files.must_equal_contents `find * -type f`.split
+      i = f.iterator
+      lambda { i.next_file }.must_raise(Findler::Error)
     end
   end
 
-  it "should support next_file blocks properly" do
+  it 'should support next_file blocks properly' do
     with_tree(%W(.a .b)) do |dir|
       Dir["**/*.a"].each { |ea| File.open(ea, 'w') { |f| f.write("hello") } }
       f = Findler.new(dir)
@@ -168,7 +167,7 @@ describe Findler do
     end
   end
 
-  it "should support files_first ordering" do
+  it 'should support files_first ordering' do
     with_tree(%W(.a), {
       :depth => 2,
       :files_per_dir => 2,
@@ -183,7 +182,7 @@ describe Findler do
     end
   end
 
-  it "should support directory_first ordering" do
+  it 'should support directory_first ordering' do
     with_tree(%W(.a), {
       :depth => 2,
       :files_per_dir => 2,

@@ -90,3 +90,9 @@ def rand_alphanumeric(length = 10)
     ALPHANUMERIC[rand(ALPHANUMERIC.length)]
   end.join
 end
+
+class Pathname
+  def touch
+    FileUtils.touch(self.to_path)
+  end
+end
