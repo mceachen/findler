@@ -4,10 +4,6 @@ require 'findler/iterator'
 require 'findler/path'
 
 class Findler
-
-  IGNORE_CASE = 1
-  INCLUDE_HIDDEN = 2
-
   attr_reader :path
 
   def initialize(path)
@@ -41,42 +37,33 @@ class Findler
   # Should patterns be interpreted in a case-sensitive manner? The default is case sensitive,
   # but if your local filesystem is not case sensitive, this flag is a no-op.
   def case_sensitive!
-    @flags &= ~IGNORE_CASE
+    @flags &= ~File::FNM_CASEFOLD
   end
 
   def case_insensitive!
-    @flags |= IGNORE_CASE
+    @flags |= File::FNM_CASEFOLD
   end
 
   def ignore_case?
-    (IGNORE_CASE & @flags) > 0
-  end
-
-  def include_hidden?
-    (INCLUDE_HIDDEN & @flags) > 0
+    (@flags & File::FNM_CASEFOLD) > 0
   end
 
   # Should we traverse hidden directories and files? (default is to skip files that start
   # with a '.')
   def include_hidden!
-    @flags |= INCLUDE_HIDDEN
+    @flags |= File::FNM_DOTMATCH
   end
 
   def exclude_hidden!
-    @flags &= ~INCLUDE_HIDDEN
+    @flags &= ~File::FNM_DOTMATCH
   end
 
-  def fnmatch_flags
-    @fnmatch_flags ||= begin
-      f = 0
-      f |= File::FNM_CASEFOLD if ignore_case?
-      f |= File::FNM_DOTMATCH if include_hidden?
-      f
-    end
+  def include_hidden?
+    (@flags & File::FNM_DOTMATCH) > 0
   end
 
   def filters_class
-    (@filters_class ||= Filters)
+    @filters_class ||= Filters
   end
 
   def filters_class=(new_filters_class)
@@ -129,7 +116,7 @@ class Findler
     if patterns.empty? || pathname.directory?
       true
     else
-      patterns.any? { |p| pathname.fnmatch(p, fnmatch_flags) }
+      patterns.any? { |p| pathname.fnmatch(p, @flags) }
     end
   end
 

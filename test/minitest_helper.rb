@@ -11,7 +11,8 @@ end
 
 def with_tmp_dir(&block)
   cwd = Dir.pwd
-  Dir.mktmpdir do |dir|
+  Dir.mkdir("tmp") unless Dir.exist?("tmp")
+  Dir.mktmpdir(nil, "tmp") do |dir|
     Dir.chdir(dir)
     yield(Pathname.new dir)
     Dir.chdir(cwd) # jruby needs us to cd out of the tmpdir so it can remove it
@@ -76,12 +77,13 @@ end
 
 def fs_case_sensitive?
   @fs_case_sensitive ||= begin
-    p = Pathname.new(rand_alphanumeric)
-    p.touch
-    Pathname.new(p.basename.to_s.upcase).exist?.tap { |ea| puts "fs_case_sensitive = #{ea}" }
+    downcase = Pathname.new(rand_alphanumeric.downcase)
+    downcase.touch
+    upcase = Pathname.new(downcase.basename.to_s.upcase)
+    !upcase.exist?
   ensure
-    p.unlink
-  end
+    downcase.unlink
+  end.tap { |ea| puts "fs_case_sensitive = #{ea}" }
 end
 
 ALPHANUMERIC = (('a'..'z').to_a + ('0'..'9').to_a).freeze
