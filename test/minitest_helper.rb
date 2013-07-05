@@ -93,6 +93,6 @@ end
 
 class Pathname
   def touch
-    FileUtils.touch(self.to_path)
+    FileUtils.touch(self.expand_path.to_s)
   end
 end
