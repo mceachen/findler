@@ -42,7 +42,7 @@ def mk_tree(target_dir, options)
 
   opts[:files_per_dir].times do |i|
     fname = "#{opts[:prefix]}-#{i}#{opts[:suffix]}"
-    FileUtils.touch(p + fname).to_s
+    (p + fname).touch
   end
   return if (opts[:depth] -= 1) <= 0
   opts[:subdirs_per_dir].times do |i|
@@ -77,7 +77,7 @@ end
 def fs_case_sensitive?
   @fs_case_sensitive ||= begin
     `touch CASETEST`
-    !File.exist?('casetest')
+    !File.exist?('casetest').tap { |ea| puts "fs_case_sensitive = #{ea}" }
   ensure
     `rm CASETEST`
   end
