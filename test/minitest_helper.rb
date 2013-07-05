@@ -76,14 +76,15 @@ end
 
 def fs_case_sensitive?
   @fs_case_sensitive ||= begin
-    `touch CASETEST`
-    !File.exist?('casetest').tap { |ea| puts "fs_case_sensitive = #{ea}" }
+    p = Pathname.new(rand_alphanumeric)
+    p.touch
+    Pathname.new(p.basename.to_s.upcase).exist?.tap { |ea| puts "fs_case_sensitive = #{ea}" }
   ensure
-    `rm CASETEST`
+    p.unlink
   end
 end
 
-ALPHANUMERIC = (('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a).freeze
+ALPHANUMERIC = (('a'..'z').to_a + ('0'..'9').to_a).freeze
 
 def rand_alphanumeric(length = 10)
   (0..length).collect do

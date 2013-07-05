@@ -23,7 +23,7 @@ describe Findler do
     `mkdir .hide ; touch .outer-hide dir-0/.hide .hide/normal.txt .hide/.secret`
   end
 
-  it "detects hidden files properly" do
+  it 'detects hidden files properly' do
     %w(/a/b /.a/b).each do |ea|
       p = Pathname.new(ea)
       Findler::Path.hidden?(p).must_be_false
@@ -75,7 +75,7 @@ describe Findler do
   it 'finds .jpg or .JPG files when constrained' do
     with_tree(%w(.jpg .txt .JPG)) do |dir|
       f = Findler.new(dir)
-      f.add_extension ".jpg"
+      f.add_extension '.jpg'
       f.case_insensitive!
       iter = f.iterator
       collect_files(iter).must_equal_contents `find * -type f -iname \\*.jpg`.split
