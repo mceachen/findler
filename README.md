@@ -1,6 +1,7 @@
 # Findler: Filesystem Iteration with Persistable State
 
 [![Build Status](https://secure.travis-ci.org/mceachen/findler.png?branch=master)](http://travis-ci.org/mceachen/findler)
+[![Code Climate](https://codeclimate.com/github/mceachen/findler.png)](https://codeclimate.com/github/mceachen/findler)
 
 Findler is a Ruby library for iterating over a filtered set of files from a given
 path, written to be suitable with concurrent workers and very large
